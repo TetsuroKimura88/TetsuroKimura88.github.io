@@ -25,20 +25,38 @@
 				padding: 24px;
 				box-shadow: 0 12px 28px rgba(16, 24, 40, 0.08);
 			}
+			p {
+				color: #4b5563;
+			}
 			h1 {
 				margin-top: 0;
 			}
+			h2 {
+				margin: 18px 0 8px;
+				font-size: 1.1rem;
+			}
+			ul {
+				margin: 0;
+				padding-left: 20px;
+			}
+			li {
+				margin: 6px 0;
+			}
 			a {
-				display: inline-block;
-				margin-top: 8px;
-				padding: 10px 14px;
-				border-radius: 10px;
 				text-decoration: none;
-				background: #0f766e;
-				color: #ffffff;
+				color: #0f766e;
 			}
 			a:hover {
-				background: #115e59;
+				color: #115e59;
+				text-decoration: underline;
+			}
+			.status {
+				margin: 10px 0;
+				padding: 8px 10px;
+				border: 1px solid #e5e7eb;
+				border-radius: 8px;
+				background: #f8fafc;
+				font-size: 0.95rem;
 			}
 		</style>
 	</head>
@@ -46,9 +64,90 @@
 		<main>
 			<section class="card">
 				<h1>公開ドキュメント</h1>
-				<p>以下のページを開けます。</p>
-				<a href="./overviews/miniapp_01.html">miniapp_01.html を開く</a>
+        <p>pages.json から索引を生成して表示します。</p>
+        <div id="status" class="status">読み込み中...</div>
+        <div id="index"></div>
 			</section>
 		</main>
+    <script>
+      const statusEl = document.getElementById("status");
+      const indexEl = document.getElementById("index");
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function renderPagesMap(pagesMap) {
+        const folders = Object.keys(pagesMap || {}).sort((a, b) => a.localeCompare(b, "ja"));
+
+        if (folders.length === 0) {
+          statusEl.textContent = "表示できるページがありません。";
+          indexEl.innerHTML = "";
+          return;
+        }
+
+        let total = 0;
+        const sections = folders.map((folder) => {
+          const files = Array.isArray(pagesMap[folder]) ? pagesMap[folder] : [];
+          files.sort((a, b) => String(a).localeCompare(String(b), "ja"));
+          total += files.length;
+
+          const items = files
+            .map((file) => {
+              const href = `./${folder}/${file}`;
+              return `<li><a href="${escapeHtml(href)}">${escapeHtml(file)}</a></li>`;
+            })
+            .join("");
+
+          return `
+    						<section>
+    							<h2>${escapeHtml(folder)} (${files.length})</h2>
+    							<ul>${items || "<li>ファイルなし</li>"}</ul>
+    						</section>
+    					`;
+        });
+
+        statusEl.textContent = `読み込み完了: ${total} 件`;
+        indexEl.innerHTML = sections.join("");
+      }
+
+      function loadJson(url, onSuccess, onError) {
+        const request = new XMLHttpRequest();
+        request.open("GET", url, true);
+        request.responseType = "json";
+
+        request.onload = function () {
+          if (request.status >= 200 && request.status < 300) {
+            const payload = request.response || JSON.parse(request.responseText || "{}");
+            onSuccess(payload);
+            return;
+          }
+          onError(new Error(`pages.json request failed: ${request.status}`));
+        };
+
+        request.onerror = function () {
+          onError(new Error("Network error while loading pages.json"));
+        };
+
+        request.send();
+      }
+
+      loadJson(
+        "./pages/pages.json",
+        (data) => {
+          renderPagesMap(data);
+        },
+        (error) => {
+          statusEl.textContent = "ページ一覧の取得に失敗しました。";
+          indexEl.innerHTML = "<p>pages/pages.json の生成と配置を確認してください。</p>";
+          console.error(error);
+        },
+      );
+    </script>
 	</body>
 </html>
