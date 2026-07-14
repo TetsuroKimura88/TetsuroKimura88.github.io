@@ -6,5 +6,8 @@
     "miniapp_01_7.html",
     "miniapp_01_8.html",
     "miniapp_01_9.html"
+  ],
+  "screens": [
+    "miniapp_01_11.html"
   ]
 }
